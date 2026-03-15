@@ -1,13 +1,11 @@
-'use client'
-
 import { useState, useMemo } from 'react'
-import Link from 'next/link'
+import { Link } from 'react-router-dom'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Label
 } from 'recharts'
 
-function calcCheatProb(rolls: number, cheatEffect: number, numCheat: number, totalDice: number) {
+function calcCheatProb(rolls, cheatEffect, numCheat, totalDice) {
   const pCheat = numCheat / totalDice
   const pFair = 1 - pCheat
   const pGivenCheat = Math.pow(cheatEffect, rolls)
@@ -16,14 +14,7 @@ function calcCheatProb(rolls: number, cheatEffect: number, numCheat: number, tot
   return (pGivenCheat * pCheat) / pTotal
 }
 
-function Slider({ label, min, max, step, value, onChange }: {
-  label: string
-  min: number
-  max: number
-  step: number
-  value: number
-  onChange: (v: number) => void
-}) {
+function Slider({ label, min, max, step, value, onChange }) {
   return (
     <div style={{ marginBottom: '18px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
@@ -46,7 +37,7 @@ function Slider({ label, min, max, step, value, onChange }: {
   )
 }
 
-const CustomDot = ({ cx, cy, payload, selectedRolls }: any) => {
+const CustomDot = ({ cx, cy, payload, selectedRolls }) => {
   if (payload.rolls === selectedRolls) {
     return <circle cx={cx} cy={cy} r={8} fill="#ef4444" stroke="white" strokeWidth={2} />
   }
@@ -85,11 +76,11 @@ export default function GamblerRoll() {
         alignItems: 'center',
         gap: '24px'
       }}>
-        <Link href="/" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', opacity: 0.8 }}>
+        <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', opacity: 0.8 }}>
           Home
         </Link>
-        <span style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>Gambler&apos;s Roll</span>
-        <Link href="/ohio-birth-data" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', opacity: 0.8 }}>
+        <span style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>Gambler's Roll</span>
+        <Link to="/ohio-birth-data" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', opacity: 0.8 }}>
           Ohio Birth Data
         </Link>
       </nav>
@@ -181,7 +172,7 @@ export default function GamblerRoll() {
                     style={{ fontSize: 12, fill: '#6b7280' }}
                   />
                 </XAxis>
-                <YAxis domain={[0, 1]} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}>
+                <YAxis domain={[0, 1]} tickFormatter={v => `${(v * 100).toFixed(0)}%`}>
                   <Label
                     value="P(Cheat Die)"
                     angle={-90}
@@ -191,7 +182,7 @@ export default function GamblerRoll() {
                   />
                 </YAxis>
                 <Tooltip
-                  formatter={(v: number) => [`${(v * 100).toFixed(2)}%`, 'P(Cheat Die)']}
+                  formatter={v => [`${(v * 100).toFixed(2)}%`, 'P(Cheat Die)']}
                   labelFormatter={l => `${l} consecutive six${Number(l) > 1 ? 'es' : ''}`}
                 />
                 <Line

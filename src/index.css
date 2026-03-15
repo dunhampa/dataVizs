@@ -6,7 +6,6 @@
 
 body {
   font-family: system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
   background: #0f172a;
   color: #f1f5f9;
   min-height: 100vh;

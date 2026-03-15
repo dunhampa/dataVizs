@@ -1,7 +1,5 @@
-'use client'
-
 import { useState, useEffect, useMemo } from 'react'
-import Link from 'next/link'
+import { Link } from 'react-router-dom'
 import { geoMercator, geoPath } from 'd3-geo'
 import { feature } from 'topojson-client'
 import Papa from 'papaparse'
@@ -16,18 +14,18 @@ const AGE_ORDER = ['< 15', '15 to 17', '18 to 19', '20 to 24', '25 to 29', '30 t
 const TREND_YEARS = ['2014', '2015', '2016', '2017', '2018']
 const REDS = ['#fee5d9', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26', '#a50f15']
 
-function mapAge(age: string) {
+function mapAge(age) {
   if (age === 'Less than 15') return '< 15'
   if (age === '45 and older') return '> 44'
   return age
 }
 
-function parseCount(val: any) {
+function parseCount(val) {
   if (val === '*' || val === '' || val == null) return 0
   return Number(val) || 0
 }
 
-function processRows(rawRows: any[]) {
+function processRows(rawRows) {
   return rawRows.map(r => ({
     BirthWeight: r['LowBirthWeightIndLowBirthWeightIndDesc'] === 'Low birth weight (<2500g)'
       ? '< 5.5 lbs' : '5.5 lbs+',
@@ -38,24 +36,24 @@ function processRows(rawRows: any[]) {
   }))
 }
 
-function getMapStats(data: any[]) {
-  const stats: Record<string, { low: number; total: number }> = {}
+function getMapStats(data) {
+  const stats = {}
   for (const row of data) {
     if (row.Year !== '2018' || row.County === 'NonOH' || row.County === 'Pending') continue
     if (!stats[row.County]) stats[row.County] = { low: 0, total: 0 }
     stats[row.County].total += row.BirthCount
     if (row.BirthWeight === '< 5.5 lbs') stats[row.County].low += row.BirthCount
   }
-  const result: Record<string, number> = {}
+  const result = {}
   for (const [county, { low, total }] of Object.entries(stats)) {
     result[county] = total > 0 ? low / total : 0
   }
   return result
 }
 
-function makeColorFn(mapStats: Record<string, number>) {
+function makeColorFn(mapStats) {
   const vals = Object.values(mapStats).filter(v => v > 0).sort((a, b) => a - b)
-  return (val: number) => {
+  return (val) => {
     if (!val || vals.length === 0) return '#f0f0f0'
     const rank = vals.filter(v => v <= val).length
     const idx = Math.min(Math.floor((rank / vals.length) * REDS.length), REDS.length - 1)
@@ -63,8 +61,8 @@ function makeColorFn(mapStats: Record<string, number>) {
   }
 }
 
-function getChartData(data: any[], county: string, years: string[]) {
-  const byYearAge: Record<string, { year: string; age: string; low: number; normal: number }> = {}
+function getChartData(data, county, years) {
+  const byYearAge = {}
   for (const row of data) {
     if (row.County !== county || !years.includes(row.Year)) continue
     const key = `${row.Year}__${row.MaternalAge}`
@@ -72,7 +70,7 @@ function getChartData(data: any[], county: string, years: string[]) {
     if (row.BirthWeight === '< 5.5 lbs') byYearAge[key].low += row.BirthCount
     else byYearAge[key].normal += row.BirthCount
   }
-  const byYear: Record<string, any[]> = {}
+  const byYear = {}
   for (const { year, age, low, normal } of Object.values(byYearAge)) {
     if (!byYear[year]) byYear[year] = []
     byYear[year].push({ age, low, normal })
@@ -83,7 +81,7 @@ function getChartData(data: any[], county: string, years: string[]) {
   return byYear
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }) {
   return (
     <div style={{ marginBottom: 32 }}>
       <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1e3a5f', margin: '0 0 10px', borderBottom: '2px solid #e5e7eb', paddingBottom: 6 }}>{title}</h3>
@@ -92,7 +90,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function CountyChart({ title, data, height = 300 }: { title: string; data: any[]; height?: number }) {
+function CountyChart({ title, data, height = 300 }) {
   return (
     <div>
       <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', textAlign: 'center', marginBottom: 4 }}>
@@ -109,7 +107,7 @@ function CountyChart({ title, data, height = 300 }: { title: string; data: any[]
               <Label value="Birth Count" angle={-90} position="insideLeft" offset={-22} style={{ fontSize: 10, fill: '#6b7280' }} />
             </YAxis>
             <Tooltip
-              formatter={(val: number, name: string) => [val.toLocaleString(), name]}
+              formatter={(val, name) => [val.toLocaleString(), name]}
               labelFormatter={l => `Age: ${l}`}
             />
             <Legend verticalAlign="top" iconSize={10} wrapperStyle={{ fontSize: 10 }} />
@@ -126,24 +124,17 @@ function CountyChart({ title, data, height = 300 }: { title: string; data: any[]
   )
 }
 
-function OhioMap({ mapStats, colorFn, selectedCounty, setSelectedCounty, hoveredCounty, setHoveredCounty }: {
-  mapStats: Record<string, number>
-  colorFn: (val: number) => string
-  selectedCounty: string
-  setSelectedCounty: (c: string) => void
-  hoveredCounty: string | null
-  setHoveredCounty: (c: string | null) => void
-}) {
-  const [geoData, setGeoData] = useState<any>(null)
+function OhioMap({ mapStats, colorFn, selectedCounty, setSelectedCounty, hoveredCounty, setHoveredCounty }) {
+  const [geoData, setGeoData] = useState(null)
 
   useEffect(() => {
     fetch(OHIO_TOPO_URL)
       .then(res => res.json())
       .then(topology => {
-        const counties = feature(topology, topology.objects.counties) as any
+        const counties = feature(topology, topology.objects.counties)
         const ohioCounties = {
           ...counties,
-          features: counties.features.filter((f: any) => String(f.id).startsWith('39'))
+          features: counties.features.filter(f => String(f.id).startsWith('39'))
         }
         setGeoData(ohioCounties)
       })
@@ -176,7 +167,7 @@ function OhioMap({ mapStats, colorFn, selectedCounty, setSelectedCounty, hovered
 
   return (
     <svg width="100%" height="100%" viewBox="0 0 700 600" style={{ background: '#f8fafc' }}>
-      {counties.map((county: any) => {
+      {counties.map(county => {
         const countyName = county.properties.name
         const pct = mapStats[countyName] ?? 0
         const isSelected = selectedCounty === countyName
@@ -201,23 +192,23 @@ function OhioMap({ mapStats, colorFn, selectedCounty, setSelectedCounty, hovered
 }
 
 export default function OhioBirthData() {
-  const [birthData, setBirthData] = useState<any[]>([])
+  const [birthData, setBirthData] = useState([])
   const [selectedCounty, setSelectedCounty] = useState('Franklin')
-  const [hoveredCounty, setHoveredCounty] = useState<string | null>(null)
+  const [hoveredCounty, setHoveredCounty] = useState(null)
   const [activeTab, setActiveTab] = useState('explore')
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     Papa.parse('/birth_data.csv', {
       download: true,
       header: true,
       skipEmptyLines: true,
-      complete: (r: any) => {
+      complete: (r) => {
         setBirthData(processRows(r.data))
         setLoading(false)
       },
-      error: (err: any) => {
+      error: (err) => {
         setError(err.message)
         setLoading(false)
       },
@@ -258,11 +249,11 @@ export default function OhioBirthData() {
           </p>
         </div>
         <nav style={{ display: 'flex', gap: '24px' }}>
-          <Link href="/" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', opacity: 0.8 }}>
+          <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', opacity: 0.8 }}>
             Home
           </Link>
-          <Link href="/gambler-roll" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', opacity: 0.8 }}>
-            Gambler&apos;s Roll
+          <Link to="/gambler-roll" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', opacity: 0.8 }}>
+            Gambler's Roll
           </Link>
         </nav>
       </div>
