@@ -46,7 +46,7 @@ const CustomDot = ({ cx, cy, payload, selectedRolls }) => {
   return <circle cx={cx} cy={cy} r={4} fill="#2563eb" stroke="white" strokeWidth={1} />
 }
 
-export default function GamblerRoll() {
+export default function GamblerRoll({ embed = false }) {
   const [cheatEffect, setCheatEffect] = useState(0.5)
   const [numCheat, setNumCheat] = useState(1)
   const [totalDice, setTotalDice] = useState(100)
@@ -64,20 +64,30 @@ export default function GamblerRoll() {
   const selectedProb = data[selectedRolls - 1]?.prob ?? 0
 
   return (
-    <div style={{ minHeight: '100vh', background: '#d7edf9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-      <div style={{ width: '100%', maxWidth: 900, marginBottom: 12 }}>
-        <Link href="/" style={{ fontSize: 13, color: '#2563eb', textDecoration: 'none' }}>← All visualizations</Link>
-      </div>
+    <div style={{ 
+      minHeight: embed ? 'auto' : '100vh', 
+      background: embed ? 'white' : '#d7edf9', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      padding: embed ? '16px' : '24px' 
+    }}>
+      {!embed && (
+        <div style={{ width: '100%', maxWidth: 900, marginBottom: 12 }}>
+          <Link href="/" style={{ fontSize: 13, color: '#2563eb', textDecoration: 'none' }}>← All visualizations</Link>
+        </div>
+      )}
       <div style={{
         background: 'white',
-        borderRadius: '14px',
-        boxShadow: '0 4px 32px rgba(0,0,0,0.10)',
+        borderRadius: embed ? '0' : '14px',
+        boxShadow: embed ? 'none' : '0 4px 32px rgba(0,0,0,0.10)',
         width: '100%',
         maxWidth: '900px',
-        padding: '36px',
+        padding: embed ? '0' : '36px',
         display: 'grid',
         gridTemplateColumns: '220px 1fr',
-        gap: '36px',
+        gap: embed ? '24px' : '36px',
       }}>
         <div>
           <h2 style={{ margin: '0 0 20px', fontSize: '13px', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
