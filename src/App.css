@@ -37,6 +37,8 @@
   border: 1px solid #475569;
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
+  text-decoration: none;
+  display: block;
 }
 
 .card:hover {
