@@ -1,11 +1,13 @@
+'use client'
+
 import { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import Link from 'next/link'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Label
 } from 'recharts'
 
-function calcCheatProb(rolls, cheatEffect, numCheat, totalDice) {
+function calcCheatProb(rolls: number, cheatEffect: number, numCheat: number, totalDice: number) {
   const pCheat = numCheat / totalDice
   const pFair = 1 - pCheat
   const pGivenCheat = Math.pow(cheatEffect, rolls)
@@ -14,7 +16,14 @@ function calcCheatProb(rolls, cheatEffect, numCheat, totalDice) {
   return (pGivenCheat * pCheat) / pTotal
 }
 
-function Slider({ label, min, max, step, value, onChange }) {
+function Slider({ label, min, max, step, value, onChange }: {
+  label: string
+  min: number
+  max: number
+  step: number
+  value: number
+  onChange: (v: number) => void
+}) {
   return (
     <div style={{ marginBottom: '18px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
@@ -37,7 +46,7 @@ function Slider({ label, min, max, step, value, onChange }) {
   )
 }
 
-const CustomDot = ({ cx, cy, payload, selectedRolls }) => {
+const CustomDot = ({ cx, cy, payload, selectedRolls }: any) => {
   if (payload.rolls === selectedRolls) {
     return <circle cx={cx} cy={cy} r={8} fill="#ef4444" stroke="white" strokeWidth={2} />
   }
@@ -69,7 +78,6 @@ export default function GamblerRoll() {
       flexDirection: 'column',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
-      {/* Navigation */}
       <nav style={{
         background: '#1e3a5f',
         padding: '12px 24px',
@@ -77,11 +85,11 @@ export default function GamblerRoll() {
         alignItems: 'center',
         gap: '24px'
       }}>
-        <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', opacity: 0.8 }}>
+        <Link href="/" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', opacity: 0.8 }}>
           Home
         </Link>
-        <span style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>Gambler's Roll</span>
-        <Link to="/ohio-birth-data" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', opacity: 0.8 }}>
+        <span style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>Gambler&apos;s Roll</span>
+        <Link href="/ohio-birth-data" style={{ color: 'white', textDecoration: 'none', fontSize: '14px', opacity: 0.8 }}>
           Ohio Birth Data
         </Link>
       </nav>
@@ -106,7 +114,6 @@ export default function GamblerRoll() {
           gap: '36px',
           boxSizing: 'border-box'
         }}>
-          {/* Sidebar */}
           <div>
             <h2 style={{ margin: '0 0 20px', fontSize: '13px', color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               Controls
@@ -152,7 +159,6 @@ export default function GamblerRoll() {
             </div>
           </div>
 
-          {/* Main */}
           <div>
             <h1 style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: 800, color: '#111827' }}>
               Cheat Die Prob. By Consecutive Rolls
@@ -175,7 +181,7 @@ export default function GamblerRoll() {
                     style={{ fontSize: 12, fill: '#6b7280' }}
                   />
                 </XAxis>
-                <YAxis domain={[0, 1]} tickFormatter={v => `${(v * 100).toFixed(0)}%`}>
+                <YAxis domain={[0, 1]} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}>
                   <Label
                     value="P(Cheat Die)"
                     angle={-90}
@@ -185,8 +191,8 @@ export default function GamblerRoll() {
                   />
                 </YAxis>
                 <Tooltip
-                  formatter={v => [`${(v * 100).toFixed(2)}%`, 'P(Cheat Die)']}
-                  labelFormatter={l => `${l} consecutive six${l > 1 ? 'es' : ''}`}
+                  formatter={(v: number) => [`${(v * 100).toFixed(2)}%`, 'P(Cheat Die)']}
+                  labelFormatter={l => `${l} consecutive six${Number(l) > 1 ? 'es' : ''}`}
                 />
                 <Line
                   type="monotone"
