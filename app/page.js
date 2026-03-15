@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+// v2
 const projects = [
   {
     slug: 'gambler-roll',
