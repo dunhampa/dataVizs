@@ -1,0 +1,21 @@
+{
+  "name": "datavizs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "react": "^18",
+    "react-dom": "^18",
+    "next": "14.2.35",
+    "recharts": "^2.13.3",
+    "react-leaflet": "^4.2.1",
+    "leaflet": "^1.9.4",
+    "papaparse": "^5.4.1",
+    "topojson-client": "^3.1.0",
+    "lucide-react": "^0.469.0"
+  }
+}
