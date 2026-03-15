@@ -1,21 +1,21 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { MapContainer, GeoJSON } from 'react-leaflet'
-import { feature } from 'topojson-client'
+import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
 import Papa from 'papaparse'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, Label
 } from 'recharts'
-import { BarChart2, TrendingUp, Info } from 'lucide-react'
-import 'leaflet/dist/leaflet.css'
 
-// ── Constants ──────────────────────────────────────────────────────────────
+// Ohio counties TopoJSON URL
+const OHIO_TOPO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json'
+
+// Constants
 const AGE_ORDER = ['< 15', '15 to 17', '18 to 19', '20 to 24', '25 to 29', '30 to 34', '35 to 39', '40 to 44', '> 44']
 const TREND_YEARS = ['2014', '2015', '2016', '2017', '2018']
 const REDS = ['#fee5d9', '#fcbba1', '#fc9272', '#fb6a4a', '#de2d26', '#a50f15']
 
-// ── Data helpers ───────────────────────────────────────────────────────────
+// Data helpers
 function mapAge(age) {
   if (age === 'Less than 15') return '< 15'
   if (age === '45 and older') return '> 44'
@@ -83,7 +83,7 @@ function getChartData(data, county, years) {
   return byYear
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────
+// Sub-components
 function Section({ title, children }) {
   return (
     <div style={{ marginBottom: 32 }}>
@@ -127,45 +127,29 @@ function CountyChart({ title, data, height = 300 }) {
   )
 }
 
-// ── Main App ───────────────────────────────────────────────────────────────
+// Main component
 export default function OhioBirthData() {
   const [birthData, setBirthData] = useState([])
-  const [geoJson, setGeoJson] = useState(null)
   const [selectedCounty, setSelectedCounty] = useState('Franklin')
+  const [hoveredCounty, setHoveredCounty] = useState(null)
   const [activeTab, setActiveTab] = useState('explore')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    Promise.all([
-      new Promise((resolve, reject) => {
-        Papa.parse('/birth_data.csv', {
-          download: true,
-          header: true,
-          skipEmptyLines: true,
-          complete: r => resolve(processRows(r.data)),
-          error: reject,
-        })
-      }),
-      fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json')
-        .then(r => r.json())
-        .then(topo => {
-          const all = feature(topo, topo.objects.counties)
-          return {
-            type: 'FeatureCollection',
-            features: all.features.filter(f => String(f.id).startsWith('39')),
-          }
-        }),
-    ])
-      .then(([data, geo]) => {
-        setBirthData(data)
-        setGeoJson(geo)
+    Papa.parse('/birth_data.csv', {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: r => {
+        setBirthData(processRows(r.data))
         setLoading(false)
-      })
-      .catch(err => {
+      },
+      error: err => {
         setError(err.message)
         setLoading(false)
-      })
+      },
+    })
   }, [])
 
   const mapStats = useMemo(() => getMapStats(birthData), [birthData])
@@ -179,27 +163,6 @@ export default function OhioBirthData() {
     () => getChartData(birthData, selectedCounty, TREND_YEARS),
     [birthData, selectedCounty]
   )
-
-  const geoJsonStyle = useCallback((feat) => ({
-    fillColor: colorFn(mapStats[feat.properties.name] ?? 0),
-    fillOpacity: 0.65,
-    color: '#444',
-    weight: 1,
-  }), [mapStats, colorFn])
-
-  const onEachFeature = useCallback((feat, layer) => {
-    const name = feat.properties.name
-    const pct = mapStats[name]
-    layer.bindTooltip(
-      `<strong>${name} County</strong><br/>Low birth weight: ${pct !== undefined ? (pct * 100).toFixed(2) : 'N/A'}%`,
-      { sticky: true }
-    )
-    layer.on({
-      click: () => setSelectedCounty(name),
-      mouseover: e => { e.target.setStyle({ weight: 2, color: '#fff', fillOpacity: 0.9 }); e.target.bringToFront() },
-      mouseout: e => { e.target.setStyle(geoJsonStyle(feat)) },
-    })
-  }, [mapStats, geoJsonStyle])
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'system-ui, sans-serif', color: '#6b7280', fontSize: 16 }}>
@@ -236,10 +199,10 @@ export default function OhioBirthData() {
       {/* Tabs */}
       <div style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 20px', display: 'flex', flexShrink: 0 }}>
         {[
-            ['explore',    'Explore Data (2018)',      <BarChart2 size={14} />],
-            ['trend',      '5 Year Trend (2014-2018)', <TrendingUp size={14} />],
-            ['background', 'Background',               <Info size={14} />],
-          ].map(([id, label, icon]) => (
+          ['explore', 'Explore Data (2018)'],
+          ['trend', '5 Year Trend (2014-2018)'],
+          ['background', 'Background'],
+        ].map(([id, label]) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
@@ -255,12 +218,12 @@ export default function OhioBirthData() {
               fontSize: 13,
             }}
           >
-            {icon}{label}
+            {label}
           </button>
         ))}
       </div>
 
-      {/* Background tab — full width */}
+      {/* Background tab */}
       {activeTab === 'background' && (
         <div style={{ flex: 1, overflowY: 'auto', background: '#f9fafb', display: 'flex', justifyContent: 'center', padding: '48px 24px' }}>
           <div style={{ maxWidth: 720, width: '100%', fontFamily: 'system-ui, sans-serif', color: '#111827', lineHeight: 1.7 }}>
@@ -272,12 +235,7 @@ export default function OhioBirthData() {
                 This dashboard visualizes Ohio live birth data across all 88 counties, allowing users to explore
                 the relationship between maternal age groups and birth weight outcomes. Counties are shaded by
                 percentage of low birth weight births (&lt;2,500g / ~5.5 lbs), with darker red indicating higher rates.
-                Clicking a county reveals its detailed breakdown by age group, for a single year or a five-year trend.
-              </p>
-              <p style={{ marginTop: 12 }}>
-                Originally built in R with Shiny and Leaflet, this version has been rebuilt as a static React
-                application — no server required. All computation runs in the browser, making it suitable for
-                hosting on any static platform (Vercel, Netlify, GitHub Pages, S3).
+                Clicking a county reveals its detailed breakdown by age group.
               </p>
             </Section>
 
@@ -288,33 +246,21 @@ export default function OhioBirthData() {
                   style={{ color: '#2563eb' }} target="_blank" rel="noreferrer">
                   Ohio Department of Health Public Data Warehouse
                 </a>
-                . The dataset covers Ohio live births from 2006-2018, broken down by county,
-                maternal age group, and birth weight category.
+                . The dataset covers Ohio live births from 2006-2018.
               </p>
             </Section>
 
             <Section title="Key Terms">
               <dl style={{ margin: 0 }}>
-                {[
-                  ['Low Birth Weight', 'A birth weight below 2,500 grams (~5.5 lbs). Associated with higher risk of infant health complications.'],
-                  ['Maternal Age Groups', 'Births are categorized into nine age bands from under 15 to 45 and older.'],
-                  ['Quantile Color Scale', 'Counties are colored in six quantile-based steps from lightest to darkest red, so relative differences across counties are visible regardless of the absolute range.'],
-                ].map(([term, def]) => (
-                  <div key={term} style={{ marginBottom: 14 }}>
-                    <dt style={{ fontWeight: 700, color: '#1e3a5f' }}>{term}</dt>
-                    <dd style={{ margin: '2px 0 0 0', color: '#374151' }}>{def}</dd>
-                  </div>
-                ))}
+                <div style={{ marginBottom: 14 }}>
+                  <dt style={{ fontWeight: 700, color: '#1e3a5f' }}>Low Birth Weight</dt>
+                  <dd style={{ margin: '2px 0 0 0', color: '#374151' }}>A birth weight below 2,500 grams (~5.5 lbs).</dd>
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <dt style={{ fontWeight: 700, color: '#1e3a5f' }}>Maternal Age Groups</dt>
+                  <dd style={{ margin: '2px 0 0 0', color: '#374151' }}>Births are categorized into nine age bands from under 15 to 45 and older.</dd>
+                </div>
               </dl>
-            </Section>
-
-            <Section title="Technical Notes">
-              <ul style={{ paddingLeft: 20, margin: 0 }}>
-                <li>Map boundaries from the US Census Bureau 2015 cartographic county files via <a href="https://github.com/topojson/us-atlas" style={{ color: '#2563eb' }} target="_blank" rel="noreferrer">us-atlas</a> (TopoJSON).</li>
-                <li>Suppressed values (marked <code style={{ background: '#f3f4f6', padding: '1px 4px', borderRadius: 3 }}>*</code> in source data for privacy) are treated as zero.</li>
-                <li>Built with React, Recharts, React-Leaflet, and PapaParse. No backend or server-side processing.</li>
-                <li>Source code: <a href="https://github.com/dunhampa/Interactive_Ohio_BirthData" style={{ color: '#2563eb' }} target="_blank" rel="noreferrer">github.com/dunhampa/Interactive_Ohio_BirthData</a></li>
-              </ul>
             </Section>
 
             <div style={{ marginTop: 40, padding: '16px 20px', background: '#fffbeb', borderLeft: '4px solid #f59e0b', borderRadius: 4, fontSize: 13, color: '#78350f' }}>
@@ -325,30 +271,64 @@ export default function OhioBirthData() {
         </div>
       )}
 
-      {/* Body: map + chart side by side (explore + trend tabs) */}
+      {/* Map and chart tabs */}
       {activeTab !== 'background' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', flex: 1, overflow: 'hidden' }}>
 
           {/* Map */}
-          <div style={{ position: 'relative', overflow: 'hidden' }}>
-            <MapContainer
-              center={[39.9, -82.1]}
-              zoom={7}
-              zoomControl={false}
-              dragging={false}
-              scrollWheelZoom={false}
-              doubleClickZoom={false}
-              style={{ height: '100%', width: '100%' }}
-              minZoom={7}
-              maxZoom={7}
+          <div style={{ position: 'relative', overflow: 'hidden', background: '#f8fafc' }}>
+            <ComposableMap
+              projection="geoMercator"
+              projectionConfig={{
+                scale: 6000,
+                center: [-82.5, 40.2]
+              }}
+              style={{ width: '100%', height: '100%' }}
             >
-              <GeoJSON
-                key="ohio-counties"
-                data={geoJson}
-                style={geoJsonStyle}
-                onEachFeature={onEachFeature}
-              />
-            </MapContainer>
+              <Geographies geography={OHIO_TOPO_URL}>
+                {({ geographies }) =>
+                  geographies
+                    .filter(geo => String(geo.id).startsWith('39'))
+                    .map(geo => {
+                      const countyName = geo.properties.name
+                      const pct = mapStats[countyName] ?? 0
+                      const isSelected = selectedCounty === countyName
+                      const isHovered = hoveredCounty === countyName
+                      return (
+                        <Geography
+                          key={geo.rsmKey}
+                          geography={geo}
+                          fill={colorFn(pct)}
+                          stroke={isSelected ? '#1e3a5f' : isHovered ? '#fff' : '#666'}
+                          strokeWidth={isSelected ? 2 : isHovered ? 1.5 : 0.5}
+                          style={{
+                            default: { outline: 'none' },
+                            hover: { outline: 'none', cursor: 'pointer' },
+                            pressed: { outline: 'none' },
+                          }}
+                          onClick={() => setSelectedCounty(countyName)}
+                          onMouseEnter={() => setHoveredCounty(countyName)}
+                          onMouseLeave={() => setHoveredCounty(null)}
+                        />
+                      )
+                    })
+                }
+              </Geographies>
+            </ComposableMap>
+
+            {/* Tooltip */}
+            {hoveredCounty && (
+              <div style={{
+                position: 'absolute', top: 16, left: 16, background: 'rgba(255,255,255,0.95)',
+                padding: '8px 12px', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                zIndex: 1000, fontSize: 12
+              }}>
+                <div style={{ fontWeight: 700, color: '#1e3a5f' }}>{hoveredCounty} County</div>
+                <div style={{ color: '#6b7280' }}>
+                  Low birth weight: {mapStats[hoveredCounty] !== undefined ? (mapStats[hoveredCounty] * 100).toFixed(2) : 'N/A'}%
+                </div>
+              </div>
+            )}
 
             {/* Legend */}
             <div style={{
