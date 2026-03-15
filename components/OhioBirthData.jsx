@@ -10,7 +10,6 @@ import {
 } from 'recharts'
 import { BarChart2, TrendingUp, Info } from 'lucide-react'
 import Link from 'next/link'
-import 'leaflet/dist/leaflet.css'
 
 const AGE_ORDER = ['< 15', '15 to 17', '18 to 19', '20 to 24', '25 to 29', '30 to 34', '35 to 39', '40 to 44', '> 44']
 const TREND_YEARS = ['2014', '2015', '2016', '2017', '2018']
