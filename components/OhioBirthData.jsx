@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { MapContainer, GeoJSON } from 'react-leaflet'
+import dynamic from 'next/dynamic'
 import { feature } from 'topojson-client'
 import Papa from 'papaparse'
 import {
@@ -10,7 +10,16 @@ import {
 } from 'recharts'
 import { BarChart2, TrendingUp, Info } from 'lucide-react'
 import Link from 'next/link'
-import 'leaflet/dist/leaflet.css'
+
+// Dynamically import MapContainer and GeoJSON to avoid SSR issues with Leaflet
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+)
+const GeoJSON = dynamic(
+  () => import('react-leaflet').then((mod) => mod.GeoJSON),
+  { ssr: false }
+)
 
 const AGE_ORDER = ['< 15', '15 to 17', '18 to 19', '20 to 24', '25 to 29', '30 to 34', '35 to 39', '40 to 44', '> 44']
 const TREND_YEARS = ['2014', '2015', '2016', '2017', '2018']
@@ -127,6 +136,11 @@ export default function OhioBirthData() {
   const [activeTab, setActiveTab] = useState('explore')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Load Leaflet CSS on client-side only
+  useEffect(() => {
+    import('leaflet/dist/leaflet.css')
+  }, [])
 
   useEffect(() => {
     Promise.all([
