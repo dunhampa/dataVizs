@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { ComposableMap, Geographies, Geography } from 'react-simple-maps'
+import { geoMercator, geoPath } from 'd3-geo'
+import { feature } from 'topojson-client'
 import Papa from 'papaparse'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -124,6 +125,75 @@ function CountyChart({ title, data, height = 300 }) {
         </div>
       )}
     </div>
+  )
+}
+
+// Ohio Map Component using d3-geo
+function OhioMap({ mapStats, colorFn, selectedCounty, setSelectedCounty, hoveredCounty, setHoveredCounty }) {
+  const [geoData, setGeoData] = useState(null)
+
+  useEffect(() => {
+    fetch(OHIO_TOPO_URL)
+      .then(res => res.json())
+      .then(topology => {
+        const counties = feature(topology, topology.objects.counties)
+        // Filter to Ohio counties only (FIPS starts with 39)
+        const ohioCounties = {
+          ...counties,
+          features: counties.features.filter(f => String(f.id).startsWith('39'))
+        }
+        setGeoData(ohioCounties)
+      })
+      .catch(err => console.error('Failed to load map:', err))
+  }, [])
+
+  const { pathGenerator, counties } = useMemo(() => {
+    if (!geoData) return { pathGenerator: null, counties: [] }
+    
+    const projection = geoMercator()
+      .center([-82.5, 40.2])
+      .scale(6000)
+      .translate([350, 300])
+    
+    const pathGen = geoPath().projection(projection)
+    
+    return {
+      pathGenerator: pathGen,
+      counties: geoData.features
+    }
+  }, [geoData])
+
+  if (!geoData || !pathGenerator) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6b7280' }}>
+        Loading map...
+      </div>
+    )
+  }
+
+  return (
+    <svg width="100%" height="100%" viewBox="0 0 700 600" style={{ background: '#f8fafc' }}>
+      {counties.map(county => {
+        const countyName = county.properties.name
+        const pct = mapStats[countyName] ?? 0
+        const isSelected = selectedCounty === countyName
+        const isHovered = hoveredCounty === countyName
+        
+        return (
+          <path
+            key={county.id}
+            d={pathGenerator(county)}
+            fill={colorFn(pct)}
+            stroke={isSelected ? '#1e3a5f' : isHovered ? '#fff' : '#666'}
+            strokeWidth={isSelected ? 2 : isHovered ? 1.5 : 0.5}
+            style={{ cursor: 'pointer' }}
+            onClick={() => setSelectedCounty(countyName)}
+            onMouseEnter={() => setHoveredCounty(countyName)}
+            onMouseLeave={() => setHoveredCounty(null)}
+          />
+        )
+      })}
+    </svg>
   )
 }
 
@@ -277,44 +347,14 @@ export default function OhioBirthData() {
 
           {/* Map */}
           <div style={{ position: 'relative', overflow: 'hidden', background: '#f8fafc' }}>
-            <ComposableMap
-              projection="geoMercator"
-              projectionConfig={{
-                scale: 6000,
-                center: [-82.5, 40.2]
-              }}
-              style={{ width: '100%', height: '100%' }}
-            >
-              <Geographies geography={OHIO_TOPO_URL}>
-                {({ geographies }) =>
-                  geographies
-                    .filter(geo => String(geo.id).startsWith('39'))
-                    .map(geo => {
-                      const countyName = geo.properties.name
-                      const pct = mapStats[countyName] ?? 0
-                      const isSelected = selectedCounty === countyName
-                      const isHovered = hoveredCounty === countyName
-                      return (
-                        <Geography
-                          key={geo.rsmKey}
-                          geography={geo}
-                          fill={colorFn(pct)}
-                          stroke={isSelected ? '#1e3a5f' : isHovered ? '#fff' : '#666'}
-                          strokeWidth={isSelected ? 2 : isHovered ? 1.5 : 0.5}
-                          style={{
-                            default: { outline: 'none' },
-                            hover: { outline: 'none', cursor: 'pointer' },
-                            pressed: { outline: 'none' },
-                          }}
-                          onClick={() => setSelectedCounty(countyName)}
-                          onMouseEnter={() => setHoveredCounty(countyName)}
-                          onMouseLeave={() => setHoveredCounty(null)}
-                        />
-                      )
-                    })
-                }
-              </Geographies>
-            </ComposableMap>
+            <OhioMap
+              mapStats={mapStats}
+              colorFn={colorFn}
+              selectedCounty={selectedCounty}
+              setSelectedCounty={setSelectedCounty}
+              hoveredCounty={hoveredCounty}
+              setHoveredCounty={setHoveredCounty}
+            />
 
             {/* Tooltip */}
             {hoveredCounty && (
