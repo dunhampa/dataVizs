@@ -1,4 +1,4 @@
-import GamblerRoll from '@/components/GamblerRoll'
+import GamblerRoll from '@/components/GamblerRoll.jsx'
 
 export const metadata = { 
   title: "Gambler's Roll — Bayesian Inference",
